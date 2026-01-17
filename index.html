@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>Kur’ân • Elmalılı (PWA)</title>
+
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">ق</div>
+      <div class="brandtext">
+        <div class="title">Kur’ân</div>
+        <div class="subtitle" id="subtitle">Elmalılı • Offline</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label class="field">
+        <span>Meal</span>
+        <select id="authorSelect" aria-label="Meal seç"></select>
+      </label>
+
+      <label class="field">
+        <span>Sure</span>
+        <select id="surahSelect" aria-label="Sure seç"></select>
+      </label>
+
+      <label class="field">
+        <span>Görünüm</span>
+        <select id="viewSelect" aria-label="Görünüm seç">
+          <option value="ayah">Ayet</option>
+          <option value="page">Sayfa</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Ses Modu</span>
+        <select id="audioMode" aria-label="Ses modu">
+          <option value="ayah">Ayet (EveryAyah)</option>
+          <option value="surah">Sure (AçıkKuran)</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Kâri</span>
+        <div class="hstack">
+          <input id="reciterSearch" class="mini" type="search" placeholder="Kâri ara…" autocomplete="off" />
+          <button class="btn ghost" id="btnFavReciter" title="Kâriyi favorilere ekle/çıkar">★</button>
+        </div>
+        <select id="reciterSelect" aria-label="Kâri seç"></select>
+      </label>
+
+      <label class="field">
+        <span>Yedek Kâri</span>
+        <select id="fallbackReciter" aria-label="Yedek kâri"></select>
+      </label>
+
+      <label class="field grow">
+        <span>Arama</span>
+        <input id="searchInput" type="search" placeholder="Arapça/Türkçe metinde ara..." autocomplete="off" />
+      </label>
+
+      <button class="btn" id="btnInstall" title="Uygulamayı yükle" style="display:none">📲</button>
+      <button class="btn" id="btnAudioOffline" title="Ses offline (indir/temizle)">🎧⬇</button>
+      <button class="btn" id="btnDownload" title="Offline indirme (tüm sureler)">⬇</button>
+      <button class="btn" id="btnBookmarks" title="Yer imleri">★</button>
+      <button class="btn" id="btnSettings" title="Ayarlar">⚙</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="status" id="status"></div>
+
+    <section class="panel" id="panel">
+      <div class="panelHeader">
+        <div class="panelTitle" id="panelTitle">Yükleniyor…</div>
+        <div class="panelActions">
+          <button class="btn ghost" id="btnPrev" title="Önceki">←</button>
+          <button class="btn ghost" id="btnNext" title="Sonraki">→</button>
+        </div>
+      </div>
+
+      <div class="content" id="content" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <!-- Mini Player Bar -->
+  <div class="player" id="player" role="region" aria-label="Sesli okuma">
+    <div class="playerLeft">
+      <button class="btn" id="btnPlayPause" title="Oynat/Duraklat">▶</button>
+      <button class="btn ghost" id="btnStop" title="Durdur">■</button>
+      <button class="btn ghost" id="btnPrevAyah" title="Önceki ayet">⟨</button>
+      <button class="btn ghost" id="btnNextAyah" title="Sonraki ayet">⟩</button>
+    </div>
+    <div class="playerMid">
+      <div class="now" id="nowPlaying">Hazır</div>
+      <input id="seek" type="range" min="0" max="100" value="0" step="1" aria-label="Konum" />
+    </div>
+    <div class="playerRight">
+      <button class="btn ghost" id="btnFollow" title="Okla takip">➤</button>
+
+      <div class="miniControls">
+        <label class="miniLabel">Hız</label>
+        <select id="speedSelect" class="mini" aria-label="Hız">
+          <option value="0.75">0.75×</option>
+          <option value="1">1.0×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+        </select>
+      </div>
+
+      <div class="miniControls">
+        <label class="miniLabel">Tekrar</label>
+        <select id="repeatSelect" class="mini" aria-label="Tekrar">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="3">3×</option>
+          <option value="5">5×</option>
+          <option value="10">10×</option>
+        </select>
+      </div>
+
+      <label class="field" style="margin:0">
+        <span style="display:none">Ses</span>
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.9" aria-label="Ses" />
+      </label>
+    </div>
+  </div>
+
+  <!-- Ses Offline Modal -->
+  <dialog class="modal" id="dlgAudio">
+    <form method="dialog" class="modalCard">
+      <div class="modalHeader">
+        <h3>Ses Offline</h3>
+        <button class="btn" value="cancel" aria-label="Kapat">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="hint">
+          Ayet mp3 (EveryAyah) dosyalarını cihazda saklayıp internet olmadan dinleyebilirsiniz. Boyut büyük olabilir.
+        </div>
+
+        <label class="field" style="margin-top:12px">
+          <span>İndirilecek Ses Kârisi</span>
+          <select id="audioCacheReciter" aria-label="Ses kârisi"></select>
+        </label>
+
+        <div class="hstack" style="margin-top:10px; flex-wrap:wrap">
+          <button class="btn" id="btnCacheThisSurah" type="button">Seçili Sureyi İndir</button>
+          <button class="btn ghost" id="btnCancelAudioDownload" type="button" style="display:none">İndirmeyi İptal Et</button>
+          <button class="btn ghost" id="btnClearAudioCache" type="button">Ses Önbelleğini Temizle</button>
+        </div>
+
+        <div class="progressWrap" style="margin-top:12px">
+          <div class="progressBar" id="audioProgressBar"></div>
+        </div>
+        <div class="hint" id="audioProgressText" style="margin-top:8px"></div>
+        <div class="hint" id="audioCacheStats" style="margin-top:6px"></div>
+      </div>
+      <div class="modalFooter">
+        <button class="btn" value="ok">Kapat</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Yer imleri -->
+  <dialog class="modal" id="dlgBookmarks">
+    <form method="dialog" class="modalCard">
+      <div class="modalHeader">
+        <h3>Yer İmleri</h3>
+        <button class="btn" value="cancel" aria-label="Kapat">✕</button>
+      </div>
+      <div class="modalBody" id="bookmarkList"></div>
+      <div class="modalFooter">
+        <button class="btn ghost" id="btnClearBookmarks" type="button">Tümünü Temizle</button>
+        <button class="btn" value="ok">Kapat</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ayarlar -->
+  <dialog class="modal" id="dlgSettings">
+    <form method="dialog" class="modalCard">
+      <div class="modalHeader">
+        <h3>Ayarlar</h3>
+        <button class="btn" value="cancel" aria-label="Kapat">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <label class="field">
+          <span>Yazı Boyutu</span>
+          <input id="fontSize" type="range" min="16" max="34" step="1" />
+        </label>
+
+        <label class="field">
+          <span>Satır Aralığı</span>
+          <input id="lineHeight" type="range" min="1.3" max="2.6" step="0.1" />
+        </label>
+
+        <label class="check">
+          <input id="showPageNums" type="checkbox" />
+          <span>Sayfa numaralarını göster</span>
+        </label>
+
+        <label class="check">
+          <input id="showArabic" type="checkbox" />
+          <span>Arapça metni göster</span>
+        </label>
+
+        <label class="check">
+          <input id="showTranslation" type="checkbox" />
+          <span>Türkçe meali göster</span>
+        </label>
+
+        <label class="check">
+          <input id="inlineMode" type="checkbox" />
+          <span>Arapça + meal aynı satır (yan yana)</span>
+        </label>
+
+        <label class="check">
+          <input id="tajweed" type="checkbox" />
+          <span>Tecvid renklendirme (veri varsa)</span>
+        </label>
+
+        <label class="check">
+          <input id="autoResume" type="checkbox" />
+          <span>Kaldığın yeri otomatik hatırla</span>
+        </label>
+
+        <hr class="sep" />
+        <div class="sectionTitle">Ses: Fallback (yedek kâri sırası)</div>
+
+        <label class="check">
+          <input id="includeFavFallback" type="checkbox" />
+          <span>Fallback sırasında favorileri de dene</span>
+        </label>
+
+        <label class="check">
+          <input id="includeDefaultFallback" type="checkbox" />
+          <span>En sonda varsayılan güvenilir kârileri dene</span>
+        </label>
+
+        <label class="field">
+          <span>Fallback #1 (birincil yedek)</span>
+          <select id="fallback1" aria-label="Fallback 1"></select>
+        </label>
+
+        <label class="field">
+          <span>Fallback #2</span>
+          <select id="fallback2" aria-label="Fallback 2"></select>
+        </label>
+
+        <label class="field">
+          <span>Fallback #3</span>
+          <select id="fallback3" aria-label="Fallback 3"></select>
+        </label>
+
+        <div class="hint">
+          Tecvid renklendirme için (isteğe bağlı) <code>data/quran-uthmani.txt</code> ve <code>data/tajweed.hafs.uthmani-pause-sajdah.json</code> dosyalarını ekleyebilirsiniz.
+        </div>
+      </div>
+
+      <div class="modalFooter">
+        <button class="btn" value="ok">Kapat</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Not Ekle -->
+  <dialog class="modal" id="dlgNote">
+    <form method="dialog" class="modalCard">
+      <div class="modalHeader">
+        <h3 id="noteTitle">Not</h3>
+        <button class="btn" value="cancel" aria-label="Kapat">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <textarea id="noteText" rows="6" placeholder="Bu ayet için not..."></textarea>
+      </div>
+
+      <div class="modalFooter">
+        <button class="btn ghost" id="btnDeleteNote" type="button">Notu Sil</button>
+        <button class="btn" id="btnSaveNote" value="ok">Kaydet</button>
+      </div>
+    </form>
+  </dialog>
+
+  <audio id="audio" preload="none"></audio>
+  <script defer src="./app.js"></script>
+</body>
+</html>
